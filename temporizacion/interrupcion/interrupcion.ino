@@ -28,7 +28,7 @@ int16_t gx, gy, gz;
 //STATUS OF THE GYROS
 bool frst_gyr;
 bool scnd_gyr;
-//bool thrd_gyr;
+bool thrd_gyr;
 
 // uncomment "OUTPUT_READABLE_ACCELGYRO" if you want to see a tab-separated
 // list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
@@ -49,7 +49,7 @@ void setup() {
   /**************** Control PINs initialize ************/
   pinMode(FIRST_GYRO, OUTPUT);
   pinMode(SECOND_GYRO, OUTPUT);
-  //pinMode(THIRD_GYRO, OUTPUT);
+  pinMode(THIRD_GYRO, OUTPUT);
   /**************** I2C initialize **************/
   // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -71,14 +71,14 @@ void setup() {
    //////////////// Lets party **************/ 
    digitalWrite(FIRST_GYRO, HIGH);
    digitalWrite(SECOND_GYRO, LOW);
-   //digitalWrite(THIRD_GYRO, HIGH);
+   digitalWrite(THIRD_GYRO, HIGH);
    
 }
 
 void loop() {
   frst_gyr = digitalRead(FIRST_GYRO);
   scnd_gyr = digitalRead(SECOND_GYRO);
-  //thrd_gyr = digitalRead(THIRD_GYRO);
+  thrd_gyr = digitalRead(THIRD_GYRO);
   
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -141,8 +141,12 @@ ISR(TIMER1_COMPA_vect){
    digitalWrite(SECOND_GYRO, LOW);
   }else if(!scnd_gyr){
     //Serial.println("2");   
-   digitalWrite(FIRST_GYRO, LOW);
+   digitalWrite(THIRD_GYRO, LOW);
    digitalWrite(SECOND_GYRO, HIGH);
+  }else if(!thrd_gyr){
+    //Serial.println("3");   
+   digitalWrite(FIRST_GYRO, LOW);
+   digitalWrite(THIRD_GYRO, HIGH);
   }
 }
 
