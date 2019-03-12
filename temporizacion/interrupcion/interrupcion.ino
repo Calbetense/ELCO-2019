@@ -68,7 +68,7 @@ void setup() {
     Serial.println("Testing device connections...");
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
-   //////////////// Lets party **************/ 
+   /************ Lets party **************/ 
    digitalWrite(FIRST_GYRO, HIGH);
    digitalWrite(SECOND_GYRO, LOW);
    digitalWrite(THIRD_GYRO, HIGH);
@@ -87,6 +87,7 @@ void loop() {
     //accelgyro.getAcceleration(&ax, &ay, &az);
     //accelgyro.getRotation(&gx, &gy, &gz);
 
+  /****************** Slow and readeble code ********************/
     #ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
         Serial.print("a/g:\t");
@@ -98,6 +99,7 @@ void loop() {
         Serial.println(gz);
     #endif
 
+  /*********************** Fast but unreadeble code *********************************/
     #ifdef OUTPUT_BINARY_ACCELGYRO
         Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
         Serial.write((uint8_t)(ay >> 8)); Serial.write((uint8_t)(ay & 0xFF));
@@ -110,6 +112,7 @@ void loop() {
     
 }
 
+/************************* One second timer *************************************/
 void timer_setup(){
   cli();  //para interrupciones
   
@@ -131,10 +134,13 @@ void timer_setup(){
   sei();  // activa interrupciones
 }
 
+/*************** One second interruption ******************/
 ISR(TIMER1_COMPA_vect){
   // esta es la atencion a la interrupcion
   // se ejecuta cada vez que se activa la interrupcion (ahora mismo, a 1 Hz, una vez cada segundo)
   // lo que este aqui dentro tiene que hacerse antes de que vuelva a generarse la interrupcion (ahora mismo, tiene una duracion maxima de 1 segundo)
+  /***************** Low-level active ***************/
+  /***************** MPUs read loop ****************/
   if(!frst_gyr){
     //Serial.println("1");
    digitalWrite(FIRST_GYRO, HIGH);
