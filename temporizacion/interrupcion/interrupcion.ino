@@ -8,6 +8,9 @@
 #define FIRST_GYRO    2
 #define SECOND_GYRO   3
 #define THIRD_GYRO    4
+#define FORTH_GYRO    5
+#define FIFTH_GYRO    6
+#define SIXTH_GYRO    7
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -29,6 +32,9 @@ int16_t gx, gy, gz;
 bool frst_gyr;
 bool scnd_gyr;
 bool thrd_gyr;
+bool frth_gyr;
+bool ffth_gyr;
+bool sxth_gyr;
 
 // uncomment "OUTPUT_READABLE_ACCELGYRO" if you want to see a tab-separated
 // list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
@@ -50,6 +56,10 @@ void setup() {
   pinMode(FIRST_GYRO, OUTPUT);
   pinMode(SECOND_GYRO, OUTPUT);
   pinMode(THIRD_GYRO, OUTPUT);
+  pinMode(FORTH_GYRO, OUTPUT);
+  pinMode(FIFTH_GYRO, OUTPUT);
+  pinMode(SIXTH_GYRO, OUTPUT);
+
   /**************** I2C initialize **************/
   // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -69,9 +79,7 @@ void setup() {
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
    /************ Lets party **************/ 
-   digitalWrite(FIRST_GYRO, HIGH);
-   digitalWrite(SECOND_GYRO, LOW);
-   digitalWrite(THIRD_GYRO, HIGH);
+   init_state();
    
 }
 
@@ -79,6 +87,9 @@ void loop() {
   frst_gyr = digitalRead(FIRST_GYRO);
   scnd_gyr = digitalRead(SECOND_GYRO);
   thrd_gyr = digitalRead(THIRD_GYRO);
+  frth_gyr = digitalRead(FIRST_GYRO);
+  ffth_gyr = digitalRead(SECOND_GYRO);
+  sxth_gyr = digitalRead(THIRD_GYRO);
   
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -142,22 +153,35 @@ ISR(TIMER1_COMPA_vect){
   /***************** Low-level active ***************/
   /***************** MPUs read loop ****************/
   if(!frst_gyr){
-    //Serial.println("1");
    digitalWrite(FIRST_GYRO, HIGH);
    digitalWrite(SECOND_GYRO, LOW);
   }else if(!scnd_gyr){
-    //Serial.println("2");   
-   digitalWrite(THIRD_GYRO, LOW);
    digitalWrite(SECOND_GYRO, HIGH);
+   digitalWrite(THIRD_GYRO, LOW);
   }else if(!thrd_gyr){
-    //Serial.println("3");   
-   digitalWrite(FIRST_GYRO, LOW);
    digitalWrite(THIRD_GYRO, HIGH);
+   digitalWrite(FORTH_GYRO, LOW);
+  }else if(!frth_gyr){
+   digitalWrite(FORTH_GYRO, HIGH);
+   digitalWrite(FIFTH_GYRO, LOW);
+  }else if(!ffth_gyr){
+   digitalWrite(FIFTH_GYRO, HIGH);
+   digitalWrite(SIXTH_GYRO, LOW);
+  }else if(!sxth_gyr){
+   digitalWrite(SIXTH_GYRO, HIGH);
+   digitalWrite(FIRST_GYRO, LOW);
+  }else{
+    init_state();
   }
 }
 
-
-
-
+void init_state(){
+   digitalWrite(FIRST_GYRO, LOW);
+   digitalWrite(SECOND_GYRO, HIGH);
+   digitalWrite(THIRD_GYRO, HIGH);
+   digitalWrite(FORTH_GYRO, HIGH);
+   digitalWrite(FIFTH_GYRO, HIGH);
+   digitalWrite(SIXTH_GYRO, HIGH);
+}
 
 
