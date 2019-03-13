@@ -3,7 +3,7 @@
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "MPU6050.h"
-
+                
 //Define PINS
 #define FIRST_GYRO    2
 #define SECOND_GYRO   3
