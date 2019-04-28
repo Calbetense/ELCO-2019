@@ -1,86 +1,109 @@
-#include <MPU6050.h>
-#include <I2Cdev.h>
+#include "I2Cdev.h"
+#include "MPU6050.h"
 #include <U8x8lib.h>
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include "Wire.h"
-#endif
+#include "Wire.h"
 U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
-MPU6050 accelgyro(0x69);
-
-// AD0 pin of acc
-const int ad0_pin[] = {0, 17, 23, 19, 2, 5}; // pines de los acelerometros
-const int led_pin = 25;
-
-int16_t gx, gy, gz;
+MPU6050 accelgyro(0x69); // <-- use for AD0 high
 
 hw_timer_t * timer = NULL;
 
-volatile int16_t dedos[5];
-char buf[12];
+int16_t ax, ay, az, ax_r, ay_r, az_r;
+const int ad0_pin[] = {0, 5, 23, 19, 2, 17};
+char buf[10];
+int n = 3;
+bool w = false;
 
-// pone un acelerometro a nivel alto, lee sus datos, y lo vuelve  aponer a nivel bajo
-void read_acc(int pin, int16_t *x, int16_t *y, int16_t *z) {
-  digitalWrite(pin, HIGH);
-  accelgyro.getMotion6 (x, y, z, &gx, &gy, &gz);
-  digitalWrite(pin, LOW);
-}
+typedef enum {no, up, down, side} pos;
+static pos pos1 = no;
 
-// escribe en la pantalla del esp32 (no se si esto funciona junto a lo de leer)
-static void printOnScreen()
-{
-  int i;
-  for(i = 0; i < 5; i++) {
-    sprintf(buf, "%d", dedos[i]);
-    u8x8.drawString(0, i, buf);
-  }
-}
+static int pos_dedos[5];
 
-
-// Esta funcion se ejecuta cada vez que salta la interrupcion periodica
 void IRAM_ATTR onTimer() {
-  digitalWrite(led_pin, !digitalRead(led_pin));
-  int16_t ref_x, ref_y, ref_z;
-  read_acc(ad0_pin[5], &ref_x, &ref_y, &ref_z);
-
-  int i;
-  for(i = 0; i < 5; i++) {
-    int16_t x, y, z;
-    read_acc(ad0_pin[i], &x, &y, &z);
-    dedos[i] = sqrt(sq(ref_x-x)+sq(ref_y-y)+sq(ref_z-z));
-  }
-  
+  digitalWrite(ad0_pin[n++], LOW);
+  n = n%6;
+  digitalWrite(ad0_pin[n], HIGH);
+  w = true;
 }
-
-
 
 void setup() {
-  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    Wire.begin();
-  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    Fastwire::setup(400, true);
-  #endif
-
-  timer = timerBegin(0, 80, true); // divisor de 80 para el timer (funciona a 80 MHz)
-  timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, 1000000, true); // contador -> cuenta hasta 1 millon -> la interrupcion es cada 1 segundo
-  timerAlarmEnable(timer);
-  
-  u8x8.begin();
-  u8x8.setFont(u8x8_font_chroma48medium8_r);
-  u8x8.drawString(0, 1, "INIT");
-
-  pinMode(led_pin, OUTPUT); // LED
-  digitalWrite(led_pin, HIGH);
-
+  Wire.begin();
   int i;
-  for (i = 0; i < 6; i++) { // inicializa todos los acelerometros y los pone a nivel bajo
+  for (i = 0; i < 6; i++) {
     pinMode(ad0_pin[i], OUTPUT);
     digitalWrite(ad0_pin[i], HIGH);
     accelgyro.initialize();
     digitalWrite(ad0_pin[i], LOW);
   }
+  delay(250);
+
+
+  Serial.begin(115200);
+
+  u8x8.begin();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
+
+  timer = timerBegin(0, 80, true); // divisor de 80 para el timer (funciona a 80 MHz)
+  timerAttachInterrupt(timer, &onTimer, true);
+  timerAlarmWrite(timer, 50000, true); // contador -> cuenta hasta 1 millon -> la interrupcion es cada 1 segundo
+  timerAlarmEnable(timer);
+
 }
 
 void loop() {
-  printOnScreen();
+  if (w) {
+    
+    if (n == 5) {
+      accelgyro.getAcceleration(&ax_r, &ay_r, &az_r);
+      /*sprintf(buf, "%06d", ax_r);
+      u8x8.drawString(0, 0, buf);
+      sprintf(buf, "%06d", ay_r);
+      u8x8.drawString(0, 1, buf);
+      sprintf(buf, "%06d", az_r);
+      u8x8.drawString(0, 2, buf);*/
+      if (ax_r > 13000) pos1 = up;
+      else if (ax_r < -13000) pos1 = down;
+      else if (ay_r > 13000) pos1 = side;
+      else pos1 = no;
+      //Serial.println(pos1);
+      
+    } else { //if (n == 0) {
+      accelgyro.getAcceleration(&ax, &ay, &az);
+
+      switch (pos1) {
+        case up:
+          if (ax > 13500) pos_dedos[n] = 1;
+          else if (az > 13500) pos_dedos[n] = 2;
+          else if (ax < -13500) pos_dedos[n] = 3;
+          else if (az < -13500) pos_dedos[n] = 4;
+          else pos_dedos[0] = 0;
+          break;
+        case down:
+          break;
+        case side:
+          break;
+        default:
+          pos_dedos[n] = 0;
+          break;
+      }
+
+      Serial.print(pos_dedos[n]);
+      Serial.print(" ");
+      if (n==4) Serial.println();
+      
+      /*sprintf(buf, "%06d", ax);
+      u8x8.drawString(0, 0, buf);
+      sprintf(buf, "%06d", ay);
+      u8x8.drawString(0, 1, buf);
+      sprintf(buf, "%06d", az);
+      u8x8.drawString(0, 2, buf);*/
+    }
+    
+    w = false;
+  }
+}
+
+static inline int sign(int x) {
+  if (x < 0) return -1;
+  else if (x == 0) return 0;
+  return 1;
 }
