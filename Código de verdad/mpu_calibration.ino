@@ -1,3 +1,38 @@
+// Arduino sketch that returns calibration offsets for MPU6050 
+//   Version 1.1  (31th January 2014)
+// Done by Luis Ródenas <luisrodenaslorda@gmail.com>
+// Based on the I2Cdev library and previous work by Jeff Rowberg <jeff@rowberg.net>
+// Updates (of the library) should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
+ 
+// These offsets were meant to calibrate MPU6050's internal DMP, but can be also useful for reading sensors. 
+// The effect of temperature has not been taken into account so I can't promise that it will work if you 
+// calibrate indoors and then use it outdoors. Best is to calibrate and use at the same room temperature.
+ 
+/* ==========  LICENSE  ==================================
+ I2Cdev device library code is placed under the MIT license
+ Copyright (c) 2011 Jeff Rowberg
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ =========================================================
+ */
+ 
+// I2Cdev and MPU6050 must be installed as libraries
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "Wire.h"
@@ -7,13 +42,15 @@
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
 int giro_deadzone=1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+
+const int ad0_pin[] = {0, 5, 23, 19, 2, 17};
  
 // default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
 // AD0 low = 0x68 (default for InvenSense evaluation board)
 // AD0 high = 0x69
 //MPU6050 accelgyro;
-MPU6050 accelgyro(0x68); // <-- use for AD0 high
+MPU6050 accelgyro(0x69); // <-- use for AD0 high
  
 int16_t ax, ay, az,gx, gy, gz;
  
@@ -30,8 +67,14 @@ void setup() {
   // initialize serial communication
   Serial.begin(115200);
  
-  // initialize device
-  accelgyro.initialize();
+  int i;
+  for (i = 0; i < 6; i++) {
+    pinMode(ad0_pin[i], OUTPUT);
+    digitalWrite(ad0_pin[i], HIGH);
+    accelgyro.initialize();
+    digitalWrite(ad0_pin[i], LOW);
+  }
+  digitalWrite(ad0_pin[0], HIGH);
  
   // wait for ready
   while (Serial.available() && Serial.read()); // empty buffer
@@ -140,7 +183,7 @@ void meansensors(){
 void calibration(){
   ax_offset=-mean_ax/8;
   ay_offset=-mean_ay/8;
-  az_offset=(16384-mean_az)/8;
+  az_offset=-mean_az/8;
  
   gx_offset=-mean_gx/4;
   gy_offset=-mean_gy/4;
