@@ -48,7 +48,7 @@ void setup() {
   //INICIALIZACIÓN DFPLAYER
   mySoftwareSerial.begin(9600, SERIAL_8N1, 25, 26);
   myDFPlayer.begin(mySoftwareSerial);
-  myDFPlayer.volume(30);  //Set volume value. From 0 to 30
+  myDFPlayer.volume(25);  //Set volume value. From 0 to 30
 
   //INICIALIZACIÓN MPU6050
   Wire.begin();
@@ -116,6 +116,9 @@ void loop() {
             else if (az<-12000) pos_dedos[4]=3;//hacia la palma
             else pos_dedos[4]=0;
             break;
+          case side: 
+            if(az>12500) pos_dedos[4]=1;
+            else if (ay<-12500) pos_dedos[4]=2;
           default:
             break;
         } 
@@ -129,17 +132,20 @@ void loop() {
         u8x8.drawString(0, 2, buf);*/
   
         sprintf(buf, "Pulgar= %d", pos_dedos[4]);
-        Serial.println(buf);
+        Serial.print(buf);
+
+        Serial.print(" Actual_letter: ");
+        Serial.println(actual_letter);
 
     /********************RESTO DE DEDOS (n = 0, 1, 2, 3)******************/    
     } else { 
       accelgyro.getAcceleration(&ax, &ay, &az);
       switch (pos1) {
         case up:
-          if (ax > 13500)       pos_dedos[n] = 1;    //estirados
-          else if (az > 13500)  pos_dedos[n] = 2;    //inclinados
-          else if (ax < -13500) pos_dedos[n] = 3;    //doblados 
-          else if (az < -13500) pos_dedos[n] = 4;    //"puño cerrado" 
+          if (ax > 12500)       pos_dedos[n] = 1;    //estirados
+          else if (az > 12500)  pos_dedos[n] = 2;    //inclinados
+          else if (ax < -12500) pos_dedos[n] = 3;    //doblados 
+          else if (az < -12500) pos_dedos[n] = 4;    //"puño cerrado" 
           else pos_dedos[0] = 0;
           break;
         case down:
@@ -163,7 +169,7 @@ void loop() {
       Serial.print(" ");
 
       // IMPRIMIR EN PANTALLA DEL ESP
-      if(n==0){
+      if(n==3){//Indice
         sprintf(buf, "%06d", ax);
         u8x8.drawString(0, 0, buf);
         sprintf(buf, "%06d", ay);
@@ -184,23 +190,23 @@ void check_letter() {
   // A --> OK
   if(pos1 == up && pos_dedos[0]==4 && pos_dedos[1]==4 && pos_dedos[2]==4 && pos_dedos[3]==4) // NO HACE FALTA poner el dedo gordo 
     actual_letter = 1; 
-  // B      
-  else if(pos1 == side && pos_dedos[0]==1 && pos_dedos[1]==1 && pos_dedos[2]==1 && pos_dedos[3]==1 && pos_dedos[4]==1) //poner el dedo gordo 
+  // B --> OK
+  else if(pos1 == side && pos_dedos[1]==1) //NO HAY MÁS CON SIDE
     actual_letter = 2;
-  // C  
-  else if (pos1 == up && pos_dedos[0]==2 && pos_dedos[1]==2 && pos_dedos[2]==2 && pos_dedos[3]==2&& (pos_dedos[4]==1 || pos_dedos[4]==2))
+  // C --> ~OK
+  else if (pos1 == up && pos_dedos[0]==2 && pos_dedos[1]==2 && pos_dedos[2]==2 && pos_dedos[3]==2)
     actual_letter = 3;
-  // D
-  else if (pos1 == up && pos_dedos[0]==1 && pos_dedos[1]==3 && pos_dedos[2]==3 && pos_dedos[3]==2 && pos_dedos[4]==1) //revisar el meñique
+  // D 
+  else if (pos1 == up && pos_dedos[0]==1 && (pos_dedos[1]==2||pos_dedos[1]==3) && (pos_dedos[2]==2||pos_dedos[2]==3) && (pos_dedos[3]==2||pos_dedos[3]==3)) 
     actual_letter = 4;
   // E
-  else if (pos1 == up && pos_dedos[0]==3 && pos_dedos[1]==3 && pos_dedos[2]==3 && pos_dedos[3]==3 && pos_dedos[4]==2) 
+  else if (pos1 == up && pos_dedos[0]==3 && pos_dedos[1]==3 && pos_dedos[2]==3 && pos_dedos[3]==3) 
     actual_letter = 5;
   // F
   else if(pos1 == up && pos_dedos[0]==2 && pos_dedos[1]==1 && pos_dedos[2]==1 && pos_dedos[3]==1 && pos_dedos[4]==1) //Revisar el 2
     actual_letter = 6;
   // G  
-  else if(pos1 == side && pos_dedos[0]==1 && pos_dedos[1]==3 && pos_dedos[2]==3 && pos_dedos[3]==3 && pos_dedos[4]==1)
+  else if(pos1 == side && pos_dedos[4]==2)
     actual_letter = 7;
   // H
   else if (pos1 == up && pos_dedos[0]==1 && pos_dedos[1]==1 && (pos_dedos[2]==3||pos_dedos[2]==2) && (pos_dedos[3]== 3||pos_dedos[3]==2) && pos_dedos[4]==2) //pulgar en la barbilla
@@ -269,7 +275,7 @@ void check_timing() {
   else counter = 0;
   last_letter = actual_letter;
   Serial.print(counter);
-  if (counter == 5) {
+  if (counter == 3) {
     char c = 64 + actual_letter;
     Serial.print("Letra: ");
     Serial.println(c);
